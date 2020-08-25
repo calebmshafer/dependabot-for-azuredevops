@@ -56,7 +56,7 @@ class AzureProcessor
       config['update_configs']
         .each { |update_config| process_dependency(project, repo, update_config) }
     rescue NotFound
-      generate_bug_dependabotconfig(project, repo)
+      # generate_bug_dependabotconfig(project, repo)
     end
 
     begin
@@ -64,97 +64,97 @@ class AzureProcessor
 
       get("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/items?path=azure-pipelines.yml")
     rescue NotFound
-      generate_bug_azurepipeline(project, repo)
+      # generate_bug_azurepipeline(project, repo)
     end
   end
 
-  def generate_bug_dependabotconfig(project, repo)
-    puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Depenadbot configuration file does not exist, raising bug if required..."
+  # def generate_bug_dependabotconfig(project, repo)
+  #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Depenadbot configuration file does not exist, raising bug if required..."
 
-    bug_title = "[#{repo[:name]}] Configure Dependabot"
-    query = { query: "Select [System.Id] From WorkItems Where [System.Title] = '#{bug_title}'" }
-    find = post("#{@api_endpoint}/#{project[:id]}/_apis/wit/wiql?api-version=5.0", query.to_json)
-    unless JSON.parse(find.body).fetch('workItems').any?
-      content = [
-        {
-          op: 'add',
-          path: '/fields/System.Title',
-          from: '',
-          value: bug_title
-        },
-        {
-          op: 'add',
-          path: '/fields/System.Tags',
-          from: '',
-          value: 'Dependabot'
-        },
-        {
-          op: 'add',
-          path: '/fields/Microsoft.VSTS.TCM.ReproSteps',
-          from: '',
-          value: "Please add `.dependabot/config.yml` to the default branch of the `#{repo[:name]}` repo." \
-                  '<p>This will automatically configure the Dependabot service to provide dependency updates.</p>' \
-                  '<p>See <a href="https://dependabot.com/docs/config-file">https://dependabot.com/docs/config-file</a> for more information.</p>'
-        },
-        {
-          op: 'add',
-          path: '/fields/Microsoft.VSTS.Common.Priority',
-          from: '',
-          value: '1'
-        },
-        {
-          op: 'add',
-          path: '/fields/Microsoft.VSTS.Common.Severity',
-          from: '',
-          value: '1 - Critical'
-        }
-      ]
-      post_patch("#{@api_endpoint}/#{project[:id]}/_apis/wit/workitems/$Bug?api-version=5.0", content.to_json)
-    end
-  end
+  #   bug_title = "[#{repo[:name]}] Configure Dependabot"
+  #   query = { query: "Select [System.Id] From WorkItems Where [System.Title] = '#{bug_title}'" }
+  #   find = post("#{@api_endpoint}/#{project[:id]}/_apis/wit/wiql?api-version=5.0", query.to_json)
+  #   unless JSON.parse(find.body).fetch('workItems').any?
+  #     content = [
+  #       {
+  #         op: 'add',
+  #         path: '/fields/System.Title',
+  #         from: '',
+  #         value: bug_title
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/System.Tags',
+  #         from: '',
+  #         value: 'Dependabot'
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/Microsoft.VSTS.TCM.ReproSteps',
+  #         from: '',
+  #         value: "Please add `.dependabot/config.yml` to the default branch of the `#{repo[:name]}` repo." \
+  #                 '<p>This will automatically configure the Dependabot service to provide dependency updates.</p>' \
+  #                 '<p>See <a href="https://dependabot.com/docs/config-file">https://dependabot.com/docs/config-file</a> for more information.</p>'
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/Microsoft.VSTS.Common.Priority',
+  #         from: '',
+  #         value: '1'
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/Microsoft.VSTS.Common.Severity',
+  #         from: '',
+  #         value: '1 - Critical'
+  #       }
+  #     ]
+  #     post_patch("#{@api_endpoint}/#{project[:id]}/_apis/wit/workitems/$Bug?api-version=5.0", content.to_json)
+  #   end
+  # end
 
-  def generate_bug_azurepipeline(project, repo)
-    puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Azure Pipeline configuration file does not exist, raising bug if required..."
+  # def generate_bug_azurepipeline(project, repo)
+  #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Azure Pipeline configuration file does not exist, raising bug if required..."
 
-    bug_title = "[#{repo[:name]}] Configure Azure Pipeline"
-    query = { query: "Select [System.Id] From WorkItems Where [System.Title] = '#{bug_title}'" }
-    find = post("#{@api_endpoint}/#{project[:id]}/_apis/wit/wiql?api-version=5.0", query.to_json)
-    unless JSON.parse(find.body).fetch('workItems').any?
-      content = [
-        {
-          op: 'add',
-          path: '/fields/System.Title',
-          from: '',
-          value: bug_title
-        },
-        {
-          op: 'add',
-          path: '/fields/System.Tags',
-          from: '',
-          value: 'Azure Pipeline'
-        },
-        {
-          op: 'add',
-          path: '/fields/Microsoft.VSTS.TCM.ReproSteps',
-          from: '',
-          value: "Please add `azure-pipelines.yml` to the default branch of the `#{repo[:name]}` repo."
-        },
-        {
-          op: 'add',
-          path: '/fields/Microsoft.VSTS.Common.Priority',
-          from: '',
-          value: '1'
-        },
-        {
-          op: 'add',
-          path: '/fields/Microsoft.VSTS.Common.Severity',
-          from: '',
-          value: '1 - Critical'
-        }
-      ]
-      post_patch("#{@api_endpoint}/#{project[:id]}/_apis/wit/workitems/$Bug?api-version=5.0", content.to_json)
-    end
-  end
+  #   bug_title = "[#{repo[:name]}] Configure Azure Pipeline"
+  #   query = { query: "Select [System.Id] From WorkItems Where [System.Title] = '#{bug_title}'" }
+  #   find = post("#{@api_endpoint}/#{project[:id]}/_apis/wit/wiql?api-version=5.0", query.to_json)
+  #   unless JSON.parse(find.body).fetch('workItems').any?
+  #     content = [
+  #       {
+  #         op: 'add',
+  #         path: '/fields/System.Title',
+  #         from: '',
+  #         value: bug_title
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/System.Tags',
+  #         from: '',
+  #         value: 'Azure Pipeline'
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/Microsoft.VSTS.TCM.ReproSteps',
+  #         from: '',
+  #         value: "Please add `azure-pipelines.yml` to the default branch of the `#{repo[:name]}` repo."
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/Microsoft.VSTS.Common.Priority',
+  #         from: '',
+  #         value: '1'
+  #       },
+  #       {
+  #         op: 'add',
+  #         path: '/fields/Microsoft.VSTS.Common.Severity',
+  #         from: '',
+  #         value: '1 - Critical'
+  #       }
+  #     ]
+  #     post_patch("#{@api_endpoint}/#{project[:id]}/_apis/wit/workitems/$Bug?api-version=5.0", content.to_json)
+  #   end
+  # end
 
   def process_dependency(project, repo, dependabot_config)
     # not supported: target_branch, default_reviewers, default_assignees, default_labels, allowed_updates, version_requirement_updates
