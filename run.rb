@@ -5,6 +5,8 @@ require_relative 'azure_processor'
 
 # Capture environment variables.
 organisation = ENV['organisation']
+project = ENV['project']
+repo = ENV['repo']
 credentials = [
   {
     "type" => "git_source",
@@ -15,4 +17,4 @@ credentials = [
 ]
 
 # Process projects in the organisation.
-AzureProcessor.new(organisation, credentials).process
+AzureProcessor.new(organisation, credentials, project, repo).process

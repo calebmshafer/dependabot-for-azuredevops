@@ -6,9 +6,11 @@ class AzureProcessor
   class Unathorized < StandardError; end
   class NotFound < StandardError; end
 
-  def initialize(organisation, available_credentials)
+  def initialize(organisation, available_credentials, project: nil, repo: nil)
     @organisation = organisation
     @available_credentials = available_credentials
+    @project = project
+    @repo = repo
 
     @api_endpoint = "https://dev.azure.com/#{organisation}"
     @organisation_credentials = available_credentials
@@ -17,33 +19,45 @@ class AzureProcessor
   end
 
   def process
-    puts "#{@organisation} => Fetch projects..."
 
-    response = get("#{@api_endpoint}/_apis/projects")
-    JSON.parse(response.body)
-        .fetch('value')
-        .map do |project|
-          {
-            id: project.fetch('id'),
-            name: project.fetch('name')
-          }
-        end
-        .each { |project| process_project(project) }
+    if @project != nil
+      puts "#{@organisation} => Using project #{@project}"
+      process_project(@project)
+    else
+      puts "#{@organisation} => Fetch projects..."
+
+      response = get("#{@api_endpoint}/_apis/projects")
+      JSON.parse(response.body)
+          .fetch('value')
+          .map do |project|
+            {
+              id: project.fetch('id'),
+              name: project.fetch('name')
+            }
+          end
+          .each { |project| process_project(project) }
+    end
   end
 
   def process_project(project)
-    puts "#{@organisation} => #{project[:name]} => Checking repositories..."
 
-    response_repos = get("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories")
-    JSON.parse(response_repos.body)
-        .fetch('value')
-        .map do |repo|
-          {
-            id: repo.fetch('id'),
-            name: repo.fetch('name')
-          }
-        end
-        .each { |repo| process_repo(project, repo) }
+    if @repo != nil
+      puts "#{@organisation} => #{project[:name]} => Using repository #{@repo}..."
+      process_repo(project, @repo)
+    else
+      puts "#{@organisation} => #{project[:name]} => Checking repositories..."
+
+      response_repos = get("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories")
+      JSON.parse(response_repos.body)
+          .fetch('value')
+          .map do |repo|
+            {
+              id: repo.fetch('id'),
+              name: repo.fetch('name')
+            }
+          end
+          .each { |repo| process_repo(project, repo) }
+    end
   end
 
   def process_repo(project, repo)
@@ -67,94 +81,6 @@ class AzureProcessor
       # generate_bug_azurepipeline(project, repo)
     end
   end
-
-  # def generate_bug_dependabotconfig(project, repo)
-  #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Depenadbot configuration file does not exist, raising bug if required..."
-
-  #   bug_title = "[#{repo[:name]}] Configure Dependabot"
-  #   query = { query: "Select [System.Id] From WorkItems Where [System.Title] = '#{bug_title}'" }
-  #   find = post("#{@api_endpoint}/#{project[:id]}/_apis/wit/wiql?api-version=5.0", query.to_json)
-  #   unless JSON.parse(find.body).fetch('workItems').any?
-  #     content = [
-  #       {
-  #         op: 'add',
-  #         path: '/fields/System.Title',
-  #         from: '',
-  #         value: bug_title
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/System.Tags',
-  #         from: '',
-  #         value: 'Dependabot'
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/Microsoft.VSTS.TCM.ReproSteps',
-  #         from: '',
-  #         value: "Please add `.dependabot/config.yml` to the default branch of the `#{repo[:name]}` repo." \
-  #                 '<p>This will automatically configure the Dependabot service to provide dependency updates.</p>' \
-  #                 '<p>See <a href="https://dependabot.com/docs/config-file">https://dependabot.com/docs/config-file</a> for more information.</p>'
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/Microsoft.VSTS.Common.Priority',
-  #         from: '',
-  #         value: '1'
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/Microsoft.VSTS.Common.Severity',
-  #         from: '',
-  #         value: '1 - Critical'
-  #       }
-  #     ]
-  #     post_patch("#{@api_endpoint}/#{project[:id]}/_apis/wit/workitems/$Bug?api-version=5.0", content.to_json)
-  #   end
-  # end
-
-  # def generate_bug_azurepipeline(project, repo)
-  #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Azure Pipeline configuration file does not exist, raising bug if required..."
-
-  #   bug_title = "[#{repo[:name]}] Configure Azure Pipeline"
-  #   query = { query: "Select [System.Id] From WorkItems Where [System.Title] = '#{bug_title}'" }
-  #   find = post("#{@api_endpoint}/#{project[:id]}/_apis/wit/wiql?api-version=5.0", query.to_json)
-  #   unless JSON.parse(find.body).fetch('workItems').any?
-  #     content = [
-  #       {
-  #         op: 'add',
-  #         path: '/fields/System.Title',
-  #         from: '',
-  #         value: bug_title
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/System.Tags',
-  #         from: '',
-  #         value: 'Azure Pipeline'
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/Microsoft.VSTS.TCM.ReproSteps',
-  #         from: '',
-  #         value: "Please add `azure-pipelines.yml` to the default branch of the `#{repo[:name]}` repo."
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/Microsoft.VSTS.Common.Priority',
-  #         from: '',
-  #         value: '1'
-  #       },
-  #       {
-  #         op: 'add',
-  #         path: '/fields/Microsoft.VSTS.Common.Severity',
-  #         from: '',
-  #         value: '1 - Critical'
-  #       }
-  #     ]
-  #     post_patch("#{@api_endpoint}/#{project[:id]}/_apis/wit/workitems/$Bug?api-version=5.0", content.to_json)
-  #   end
-  # end
 
   def process_dependency(project, repo, dependabot_config)
     # not supported: target_branch, default_reviewers, default_assignees, default_labels, allowed_updates, version_requirement_updates
