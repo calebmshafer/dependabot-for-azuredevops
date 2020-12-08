@@ -22,6 +22,8 @@ steps:
   inputs:
     action: 'Run an image'
     envVars: |
-     organisation=$(env.organisation)
-     credentials=$(env.credentials)
+     organisation=$(organisation)
+     credentials=$(credentials)
+     project=$(project)
+     repo=$(repo)
     detached: false

@@ -6,9 +6,13 @@ class AzureProcessor
   class Unathorized < StandardError; end
   class NotFound < StandardError; end
 
-  def initialize(organisation, available_credentials, project: nil, repo: nil)
+  def initialize(organisation, available_credentials, project, repo)
     @organisation = organisation
     @available_credentials = available_credentials
+
+    puts "Testing project name: #{project}"
+    puts "Testing repo name: #{repo}"
+
     @project = project
     @repo = repo
 
@@ -22,7 +26,20 @@ class AzureProcessor
 
     if @project != nil
       puts "#{@organisation} => Using project #{@project}"
-      process_project(@project)
+
+      response = get("#{@api_endpoint}/_apis/projects")
+      JSON.parse(response.body)
+          .fetch('value')
+          .select do |project|
+            project.fetch('name') == @project
+          end
+          .map do |project|
+            {
+              id: project.fetch('id'),
+              name: project.fetch('name')
+            }
+          end
+          .each { |project| process_project(project) }
     else
       puts "#{@organisation} => Fetch projects..."
 
@@ -43,7 +60,20 @@ class AzureProcessor
 
     if @repo != nil
       puts "#{@organisation} => #{project[:name]} => Using repository #{@repo}..."
-      process_repo(project, @repo)
+
+      response_repos = get("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories")
+      JSON.parse(response_repos.body)
+          .fetch('value')
+          .select do |repo|
+            repo.fetch('name') == @repo
+          end
+          .map do |repo|
+            {
+              id: repo.fetch('id'),
+              name: repo.fetch('name')
+            }
+          end
+          .each { |repo| process_repo(project, repo) }
     else
       puts "#{@organisation} => #{project[:name]} => Checking repositories..."
 
@@ -263,7 +293,7 @@ class AzureProcessor
   #############
 
   def get(url)
-    # puts "get -> #{url}"
+    puts "get -> #{url}"
 
     response = Excon.get(
       url,
@@ -275,7 +305,7 @@ class AzureProcessor
     raise Unathorized if response.status == 401
     raise NotFound if response.status == 404
 
-    # puts " -> (#{response.status}) #{response.body}"
+    puts " -> (#{response.status}) #{response.body}"
 
     response
   end
