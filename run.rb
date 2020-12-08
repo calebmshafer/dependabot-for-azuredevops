@@ -7,6 +7,11 @@ require_relative 'azure_processor'
 organisation = ENV['organisation']
 project = ENV['project']
 repo = ENV['repo']
+
+if repo == "$(repo)"
+  repo = nil
+end
+
 credentials = [
   {
     "type" => "git_source",

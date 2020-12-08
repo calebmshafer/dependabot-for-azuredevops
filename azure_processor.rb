@@ -10,9 +10,6 @@ class AzureProcessor
     @organisation = organisation
     @available_credentials = available_credentials
 
-    puts "Testing project name: #{project}"
-    puts "Testing repo name: #{repo}"
-
     @project = project
     @repo = repo
 
