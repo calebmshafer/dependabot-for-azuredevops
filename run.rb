@@ -13,6 +13,11 @@ credentials = [
     "host" => "dev.azure.com",
     "username" => "x-access-token",
     "password" => ENV['credentials']
+  },
+  {
+    "type" => "npm_registry",
+    "token" => ENV['token'],
+    "registry" => ENV['registry'],
   }
 ]
 

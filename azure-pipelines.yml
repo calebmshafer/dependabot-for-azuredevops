@@ -26,4 +26,6 @@ steps:
      credentials=$(credentials)
      project=$(project)
      repo=$(repo)
+     token=$(token)
+     registry=$(registry)
     detached: false

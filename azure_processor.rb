@@ -100,6 +100,7 @@ class AzureProcessor
       config['update_configs']
         .each { |update_config| process_dependency(project, repo, update_config) }
     rescue NotFound
+      puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Failed to find a `.dependabot/config.yml` file in the default branch"
       # generate_bug_dependabotconfig(project, repo)
     end
 
@@ -108,6 +109,7 @@ class AzureProcessor
 
       get("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/items?path=azure-pipelines.yml")
     rescue NotFound
+      puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Failed to find a `azure-pipelines.yml` file in the default branch"
       # generate_bug_azurepipeline(project, repo)
     end
   end
@@ -215,7 +217,8 @@ class AzureProcessor
           elsif checker.can_update?(requirements_to_unlock: :own) then :own
           elsif checker.can_update?(requirements_to_unlock: :all) then :all
           else :update_not_possible
-            end
+          end
+
         if requirements_to_unlock == :update_not_possible
           puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Cannot be updated"
           next
@@ -293,7 +296,7 @@ class AzureProcessor
   #############
 
   def get(url)
-    puts "get -> #{url}"
+    # puts "get -> #{url}"
 
     response = Excon.get(
       url,
@@ -305,7 +308,7 @@ class AzureProcessor
     raise Unathorized if response.status == 401
     raise NotFound if response.status == 404
 
-    puts " -> (#{response.status}) #{response.body}"
+    # puts " -> (#{response.status}) #{response.body}"
 
     response
   end
