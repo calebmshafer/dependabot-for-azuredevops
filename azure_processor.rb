@@ -6,7 +6,7 @@ class AzureProcessor
   class Unathorized < StandardError; end
   class NotFound < StandardError; end
 
-  def initialize(organisation, available_credentials, project, repo)
+  def initialize(organisation, available_credentials, project, repo, imjs_rc = false)
     @organisation = organisation
     @available_credentials = available_credentials
 
@@ -176,7 +176,10 @@ class AzureProcessor
       )
       files = fetcher.files
 
-      puts "#{files}"
+      if @imjs_rc_test != nil
+        files = update_imjs_deps_rc(files)
+        puts "#{files}"
+      end
 
       commit = fetcher.commit
 
@@ -187,92 +190,92 @@ class AzureProcessor
         credentials: @available_credentials
       )
 
-      dependencies = parser.parse
-      dependencies.select(&:top_level?).each do |dep|
-        if match_dependency?(dep.name, ignore_dependency_names)
-          puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Dependency ignored"
-          next
-        end
+      # dependencies = parser.parse
+      # dependencies.select(&:top_level?).each do |dep|
+      #   if match_dependency?(dep.name, ignore_dependency_names)
+      #     puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Dependency ignored"
+      #     next
+      #   end
 
-        puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Checking for updates.."
+      #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Checking for updates.."
 
-        checker = Dependabot::UpdateCheckers.for_package_manager(package_manager).new(
-          dependency: dep,
-          dependency_files: files,
-          credentials: @available_credentials
-        )
+      #   checker = Dependabot::UpdateCheckers.for_package_manager(package_manager).new(
+      #     dependency: dep,
+      #     dependency_files: files,
+      #     credentials: @available_credentials
+      #   )
 
-        # Check if the dependency is up to date.
-        if checker.up_to_date?
-          puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Already up to date"
-          next
-        end
+      #   # Check if the dependency is up to date.
+      #   if checker.up_to_date?
+      #     puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Already up to date"
+      #     next
+      #   end
 
-        # Check if the dependency can be updated.
-        requirements_to_unlock =
-          if !checker.requirements_unlocked_or_can_be?
-            if checker.can_update?(requirements_to_unlock: :none) then :none
-            else :update_not_possible
-            end
-          elsif checker.can_update?(requirements_to_unlock: :own) then :own
-          elsif checker.can_update?(requirements_to_unlock: :all) then :all
-          else :update_not_possible
-          end
+      #   # Check if the dependency can be updated.
+      #   requirements_to_unlock =
+      #     if !checker.requirements_unlocked_or_can_be?
+      #       if checker.can_update?(requirements_to_unlock: :none) then :none
+      #       else :update_not_possible
+      #       end
+      #     elsif checker.can_update?(requirements_to_unlock: :own) then :own
+      #     elsif checker.can_update?(requirements_to_unlock: :all) then :all
+      #     else :update_not_possible
+      #     end
 
-        if requirements_to_unlock == :update_not_possible
-          puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Cannot be updated"
-          next
-        end
+      #   if requirements_to_unlock == :update_not_possible
+      #     puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Cannot be updated"
+      #     next
+      #   end
 
-        updated_deps = checker.updated_dependencies(
-          requirements_to_unlock: requirements_to_unlock
-        )
-        puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Generating file updates..."
-        updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
-          dependencies: updated_deps,
-          dependency_files: files,
-          credentials: @available_credentials
-        )
-        updated_files = updater.updated_dependency_files
+      #   updated_deps = checker.updated_dependencies(
+      #     requirements_to_unlock: requirements_to_unlock
+      #   )
+      #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Generating file updates..."
+      #   updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
+      #     dependencies: updated_deps,
+      #     dependency_files: files,
+      #     credentials: @available_credentials
+      #   )
+      #   updated_files = updater.updated_dependency_files
 
-        puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Creating pull request..."
-        pr_creator = Dependabot::PullRequestCreator.new(
-          source: project_repo_source,
-          base_commit: commit,
-          dependencies: updated_deps,
-          files: updated_files,
-          credentials: @available_credentials,
-          label_language: true
-        )
-        pull_request = pr_creator.create
+      #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Creating pull request..."
+      #   pr_creator = Dependabot::PullRequestCreator.new(
+      #     source: project_repo_source,
+      #     base_commit: commit,
+      #     dependencies: updated_deps,
+      #     files: updated_files,
+      #     credentials: @available_credentials,
+      #     label_language: true
+      #   )
+      #   pull_request = pr_creator.create
 
-        unless pull_request
-          puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Pull request already exists"
-          next
-        end
+      #   unless pull_request
+      #     puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Pull request already exists"
+      #     next
+      #   end
 
-        pull_request_details = JSON.parse(pull_request.body)
-        pull_request_id = pull_request_details.fetch('pullRequestId')
-        puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Pull request created (#{pull_request_id})"
+      #   pull_request_details = JSON.parse(pull_request.body)
+      #   pull_request_id = pull_request_details.fetch('pullRequestId')
+      #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version} -> #{updated_deps.first.version}) => Pull request created (#{pull_request_id})"
 
-        next unless match_dependency?(dep.name, automerged_dependency_names)
+      #   next unless match_dependency?(dep.name, automerged_dependency_names)
 
-        creator_id = pull_request_details.fetch('createdBy').fetch('id')
+      #   creator_id = pull_request_details.fetch('createdBy').fetch('id')
 
-        puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Setting pull request to auto-complete by #{creator_id}..."
-        content = {
-          autoCompleteSetBy: {
-            id: creator_id
-          },
-          completionOptions: {
-            deleteSourceBranch: 'true'
-          }
-        }
-        patch("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/pullrequests/#{pull_request_id}?api-version=5.0", content.to_json)
+      #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Setting pull request to auto-complete by #{creator_id}..."
+      #   content = {
+      #     autoCompleteSetBy: {
+      #       id: creator_id
+      #     },
+      #     completionOptions: {
+      #       deleteSourceBranch: 'true'
+      #     }
+      #   }
+      #   patch("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/pullrequests/#{pull_request_id}?api-version=5.0", content.to_json)
 
-        puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Adding automatic approval by #{creator_id}..."
-        content = { vote: 10 }
-        put("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/pullrequests/#{pull_request_id}/reviewers/#{creator_id}?api-version=5.0", content.to_json)
+      #   puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => #{dep.name} (#{dep.version}) => Adding automatic approval by #{creator_id}..."
+      #   content = { vote: 10 }
+      #   put("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/pullrequests/#{pull_request_id}/reviewers/#{creator_id}?api-version=5.0", content.to_json)
       end
     end
   rescue StandardError => e
@@ -399,5 +402,12 @@ class AzureProcessor
     # puts " -> (#{response.status}) #{response.body}"
 
     response
+  end
+
+  def update_imjs_deps_rc(files:)
+
+    files.tr("@bentley/imodeljs-backend\": \"2.8.6\"", "@bentley/imodeljs-backend\": \"rc\"")
+  
+    return files
   end
 end
