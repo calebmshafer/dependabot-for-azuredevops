@@ -175,6 +175,9 @@ class AzureProcessor
         credentials: @available_credentials
       )
       files = fetcher.files
+
+      puts "#{files}"
+
       commit = fetcher.commit
 
       puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => #{package_manager} => Parsing dependencies information.."
