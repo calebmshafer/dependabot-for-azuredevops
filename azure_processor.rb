@@ -100,15 +100,6 @@ class AzureProcessor
       puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Failed to find a `.dependabot/config.yml` file in the default branch"
       # generate_bug_dependabotconfig(project, repo)
     end
-
-    begin
-      puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Checking for Azure Pipeline configuration file..."
-
-      get("#{@api_endpoint}/#{project[:id]}/_apis/git/repositories/#{repo[:id]}/items?path=azure-pipelines.yml")
-    rescue NotFound
-      puts "#{@organisation} => #{project[:name]} => #{repo[:name]} => Failed to find a `azure-pipelines.yml` file in the default branch"
-      # generate_bug_azurepipeline(project, repo)
-    end
   end
 
   def process_dependency(project, repo, dependabot_config)
